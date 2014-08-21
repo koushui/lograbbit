@@ -2,12 +2,13 @@
 var htmlhead = function(title) {
 	var html = '<html><head><title>' + title +'</title>'+
 	'<style type="text/css">' +
-		'body{font-family:Consolas}' + 
+		'body{font-family:Consolas, 微软雅黑}' + 
 		'a:link {color: #99F; text-decoration: none}' +	
 		'a:visited {color: #99F; text-decoration: none}' +	
 		'a:hover {color: #99F; text-decoration: underline}' +
 		'a:active {color: #99F; text-decoration: none}' +
-	'</style></head>' +
+	'</style>' +
+	'<meta http-equiv="content-type" content="text/html; charset=UTF-8" /></head>' +
 	'<body>';
 	return html;
 };
@@ -21,7 +22,7 @@ exports.foot = htmlfoot;
 
 // 错误
 exports.error = function (err) {
-	var html = htmlhead() +
+	var html = htmlhead('Error') +
 	'<h3>Something wrong happen...</h3>' +
 	err +'<br><a href="/">Back</a>'
 	htmlfoot();
@@ -40,7 +41,7 @@ exports.editbox = function (filename, content) {
 	var html = htmlhead('EditBox') +
 	'<form name="editbox" action="/upload" method="POST"><textarea style="width:100%; height:400px; resize:none" name="file">' + content + '</textarea>' +
 	'<input type="text" name="name" style="width:100%" value="' + filename + '" />' +
-	'<a href="javascript:void" onclick ="document.forms[\'editbox\'].submit()">Update</a>&nbsp<a href="/view">Back</a></form>' +
+	'<a href="javascript:void" onclick ="document.forms[\'editbox\'].submit()">pdate</a>&nbsp<a href="/view">返回</a></form>' +
 	htmlfoot();
 	return html;
 }

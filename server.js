@@ -7,8 +7,8 @@ var fs = require('fs'),
 	html = require('./html.js'),
 	logstash, //监测logstash是否运行
 	isWin = /^win/.test(process.platform),
-	defaultFilename = 'default.conf'; // 默认配置文件
-	
+	defaultFilename = 'default.conf', // 默认配置文件
+	listenPort = process.argv[2] == undefined ? 3000 : process.argv[2]; 
 
 http.createServer(function (req, res) {
 	
@@ -37,7 +37,7 @@ http.createServer(function (req, res) {
 			if (isWin) {
 				logstash = spawn('cmd', ['/c', '..\\logstash.bat', 'agent', '-f', '../'+ conf]);
 			} else {
-				logstash = spawn('../logstash', ['agent', '-f', conf]);
+				logstash = spawn('../logstash', ['agent', '-f', '../' + conf]);
 			}
 			
 			logstash.stdout.on('data', function (data) {
@@ -50,6 +50,7 @@ http.createServer(function (req, res) {
 
 			logstash.on('close', function (code) {
 			  console.log('[INFO] child process exited with code ' + code);
+			  logstash = undefined;
 			});
 			console.log('[INFO] trying to start logstash with confing file [' + conf +']...');
 			res.end(html.info('starting logstash with config file [' + conf +']'));
@@ -97,7 +98,7 @@ http.createServer(function (req, res) {
 				res.write('<h3>list of config files in logstash directory</h3>');
 				files.forEach(function (file){
 					if (path.extname(file) == '.conf') {
-						res.write('<a href="/view?name=' + file + '">Edit</a>&nbsp' + '<a href="/start?conf=' + file + '">Run</a>&nbsp<a href="/delete?name=' + file +'">Delete</a>&nbsp');
+						res.write('<a href="/view?name=' + file + '">编辑</a>&nbsp' + '<a href="/start?conf=' + file + '">启动</a>&nbsp<a href="/delete?name=' + file +'">删除</a>&nbsp');
 						if (file == defaultFilename) {
 							res.write('<b>' + file + '</b><br />');
 						} else {
@@ -131,16 +132,16 @@ http.createServer(function (req, res) {
 	} else if ('/delete' == pathname) {
 		var name = query.name;
 		if (name == undefined) {
-			res.end(html.error('Must offer the name of config file to delete ...'));
+			res.end(html.error('Need a correct file name...'));
 		} else {
 			if (path.extname(name) != '.conf'){
-				res.end(html.error('the file to delete must be a .conf file...'));
+				res.end(html.error('The file to delete must have suffix .conf...'));
 			}
 			fs.exists('../' + name, function(exists) {
 				if (exists) {
 					fs.unlink('../' + name, function(err, data){
 						if (err) throw err;
-						res.end(html.info('Delete successful!'));
+						res.end(html.info('Delete file successful!'));
 					});
 				} else {
 					res.end(html.error('No such file!'));
@@ -151,6 +152,6 @@ http.createServer(function (req, res) {
 		res.writeHead(404);
 		res.end(html.error('No handler for url ' + req.url));
 	}
-}).listen(3000); 
-console.log("[INFO] Server started...");
+}).listen(listenPort); 
+console.log("[INFO] Server started..." + 'Listening Port: ' + listenPort);
 console.log("[INFO] Platform is windows:" + isWin);
