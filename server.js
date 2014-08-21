@@ -98,7 +98,7 @@ http.createServer(function (req, res) {
 				res.write('<h3>list of config files in logstash directory</h3>');
 				files.forEach(function (file){
 					if (path.extname(file) == '.conf') {
-						res.write('<a href="/view?name=' + file + '">编辑</a>&nbsp' + '<a href="/start?conf=' + file + '">启动</a>&nbsp<a href="/delete?name=' + file +'">删除</a>&nbsp');
+						res.write('<a href="/view?name=' + file + '">Edit</a>&nbsp' + '<a href="/start?conf=' + file + '">Run</a>&nbsp<a href="/delete?name=' + file +'">Delete</a>&nbsp');
 						if (file == defaultFilename) {
 							res.write('<b>' + file + '</b><br />');
 						} else {

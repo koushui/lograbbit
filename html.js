@@ -41,7 +41,7 @@ exports.editbox = function (filename, content) {
 	var html = htmlhead('EditBox') +
 	'<form name="editbox" action="/upload" method="POST"><textarea style="width:100%; height:400px; resize:none" name="file">' + content + '</textarea>' +
 	'<input type="text" name="name" style="width:100%" value="' + filename + '" />' +
-	'<a href="javascript:void" onclick ="document.forms[\'editbox\'].submit()">pdate</a>&nbsp<a href="/view">返回</a></form>' +
+	'<a href="javascript:void" onclick ="document.forms[\'editbox\'].submit()">Update</a>&nbsp<a href="/view">Back</a></form>' +
 	htmlfoot();
 	return html;
 }
