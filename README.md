@@ -11,7 +11,7 @@ How to use it
 -------------------
 Download the zip, extract it and put files in the directory "/logstash-1.x.x/bin",     
 run     
-`node server.js \[port\]`     
+`node server.js [port]`     
 port default is 3000, then use browser access     
 `http://yourip:yourport/`          
 you can use it to manage logstash and its configuation file!
