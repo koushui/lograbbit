@@ -6,7 +6,8 @@ var fs = require('fs'),
 	kill = require('./kill.js'),
 	html = require('./html.js'),
 	logstash, //监测logstash是否运行
-	isWin = /^win/.test(process.platform);
+	isWin = /^win/.test(process.platform),
+	defaultFilename = 'default.conf'; // 默认配置文件
 	
 
 http.createServer(function (req, res) {
@@ -30,13 +31,13 @@ http.createServer(function (req, res) {
 		if (query.conf != undefined) {
 			var conf = query.conf;
 		} else {
-			conf = 'apache-ws.conf';
+			conf = defaultFilename;
 		}
 		if (logstash == undefined) {
 			if (isWin) {
-				logstash = spawn('cmd', ['/c', 'logstash.bat', 'agent', '-f', conf]);
+				logstash = spawn('cmd', ['/c', '..\\logstash.bat', 'agent', '-f', '../'+ conf]);
 			} else {
-				logstash = spawn('./logstash', ['agent', '-f', conf]);
+				logstash = spawn('../logstash', ['agent', '-f', conf]);
 			}
 			
 			logstash.stdout.on('data', function (data) {
@@ -75,9 +76,9 @@ http.createServer(function (req, res) {
 			if (path.extname(name) != '.conf'){
 				res.end(html.error('the file to view must be a .conf file...'));
 			}
-			fs.exists(name, function(exists) {
+			fs.exists('../' + name, function(exists) {
 				if (exists) {
-					fs.readFile(name, 'utf8', function(err, data){
+					fs.readFile('../' + name, 'utf8', function(err, data){
 						if (err) throw err;
 						res.end(html.editbox(name, data));
 					});
@@ -88,7 +89,7 @@ http.createServer(function (req, res) {
 			});
 			
 		} else {
-			fs.readdir('.', function(err, files) {
+			fs.readdir('../', function(err, files) {
 				if (err) throw err;
 				
 				res.writeHead(200, {'Content-Type':'text/html'});
@@ -96,7 +97,12 @@ http.createServer(function (req, res) {
 				res.write('<h3>list of config files in logstash directory</h3>');
 				files.forEach(function (file){
 					if (path.extname(file) == '.conf') {
-						res.write('<a href="/view?name=' + file + '">Edit</a>&nbsp' + '<a href="/start?conf=' + file + '">Run</a>&nbsp' + file + '<br />');
+						res.write('<a href="/view?name=' + file + '">Edit</a>&nbsp' + '<a href="/start?conf=' + file + '">Run</a>&nbsp<a href="/delete?name=' + file +'">Delete</a>&nbsp');
+						if (file == defaultFilename) {
+							res.write('<b>' + file + '</b><br />');
+						} else {
+							res.write(file + '<br />')
+						}
 					}
 				});
 				res.write('<a href="/">Back</a>');
@@ -113,7 +119,7 @@ http.createServer(function (req, res) {
 			var post = qs.parse(body),
 				filename = post['name'] == undefined ? 'default.conf' : post['name'];
 			if (path.extname(post['name']) == '.conf') {
-				fs.writeFile(filename, post['file'], function(err) {
+				fs.writeFile('../' + filename, post['file'], function(err) {
 					if (err) throw err;
 					console.log('[INFO] uploaded file: '+ filename);
 					res.end(html.info('File uploaded successful!'));
@@ -122,6 +128,25 @@ http.createServer(function (req, res) {
 				res.end(html.error('It isn\'t a config file...'));
 			}
 		});
+	} else if ('/delete' == pathname) {
+		var name = query.name;
+		if (name == undefined) {
+			res.end(html.error('Must offer the name of config file to delete ...'));
+		} else {
+			if (path.extname(name) != '.conf'){
+				res.end(html.error('the file to delete must be a .conf file...'));
+			}
+			fs.exists('../' + name, function(exists) {
+				if (exists) {
+					fs.unlink('../' + name, function(err, data){
+						if (err) throw err;
+						res.end(html.info('Delete successful!'));
+					});
+				} else {
+					res.end(html.error('No such file!'));
+				}
+			});
+		}
 	} else {
 		res.writeHead(404);
 		res.end(html.error('No handler for url ' + req.url));
