@@ -3,12 +3,13 @@ var fs = require('fs'),
 	spawn = require('child_process').spawn,
 	path = require('path'),
 	url = require('url'),
-	kill = require('./kill.js'),
-	html = require('./html.js'),
+	kill = require('./kill.js'), //结束程序用
+	html = require('./html.js'), //用于生成html的模板
+	msg = require('./msg.js'), //用于发送上线和下线消息
 	logstash, //监测logstash是否运行
 	isWin = /^win/.test(process.platform),
 	defaultFilename = 'default.conf', // 默认配置文件
-	listenPort = process.argv[2] == undefined ? 3000 : process.argv[2]; 
+	listenPort = process.argv[2] == undefined ? 3000 : process.argv[2]; 02
 
 http.createServer(function (req, res) {
 	
@@ -18,14 +19,14 @@ http.createServer(function (req, res) {
 	console.log('[INFO] request for url: '+ req.method + ' ' + req.url);
 	if ('/' == pathname) {
 		res.writeHead(200, {'Content-Type':'text/html;charset=UTF-8'})
-		res.write(html.head('Overview'));
-		res.write('<h3>~Server is working~</h3>');
-		res.write('<b>[Server Information]</b><br/>');
-		res.write('Platform: ' + process.platform + '<br/>');
-		var status = !(logstash == undefined) ? 'Running' : 'Not running',
-			switcher = !(logstash == undefined) ? '<a href="/end">Terminate</a>' : '<a href="/start">Start</a>';
-		res.write('Logstash status: '+ status + '<br/>');
-		res.write('<a href="/view">View</a>&nbsp|&nbsp' + switcher + '&nbsplogstash');
+		res.write(html.head('总览'));
+		res.write('<h3>~兔子开始工作了~</h3>');
+		res.write('<b>[服务器信息]</b><br/>');
+		res.write('运行平台: ' + process.platform + '<br/>');
+		var status = !(logstash == undefined) ? '运行中' : '未运行',
+			switcher = !(logstash == undefined) ? '<a href="/end">停止</a>' : '<a href="/start">启动</a>';
+		res.write('Logstash 状态: '+ status + '<br/>');
+		res.write('<a href="/view">查看</a>&nbsp|&nbsp' + switcher + '&nbsplogstash');
 		res.end(html.foot());
 	} else if ('/start' == pathname) {
 		if (query.conf != undefined) {
@@ -52,15 +53,16 @@ http.createServer(function (req, res) {
 			  console.log('[INFO] child process exited with code ' + code);
 			  logstash = undefined;
 			});
-			console.log('[INFO] trying to start logstash with confing file [' + conf +']...');
-			res.end(html.info('starting logstash with config file [' + conf +']'));
+			console.log('[INFO] trying to start logstash with config file [' + conf +']...');
+			msg.online();
+			res.end(html.info('以配置文件[' + conf +']启动logstash'));
 		} else {
-			res.end(html.error('logstash has been started!'));
+			res.end(html.error('logstash已经启动!'));
 		}
 	} else if ('/end' == pathname){
 		if (logstash != undefined) {
 			logstash.on('exit', function(code) {
-				res.end(html.info('logstash stoped with code ' + code));
+				res.end(html.info('logstash已退出，退出码：' + code));
 			});
 			if (isWin) {
 				kill.wkill(logstash.pid);
@@ -68,14 +70,15 @@ http.createServer(function (req, res) {
 				kill.ukill(logstash.pid);
 			}
 			logstash = undefined;
+			msg.offline();
 		} else {
-			res.end(html.error('logstash hasn\'t been started...'));
+			res.end(html.error('logstash并未启动...'));
 		}
 	} else if ('/view' == pathname) {
 		var name = query.name;
 		if (name != undefined) {
 			if (path.extname(name) != '.conf'){
-				res.end(html.error('the file to view must be a .conf file...'));
+				res.end(html.error('查看的文件必须以.conf为后缀...'));
 			}
 			fs.exists('../' + name, function(exists) {
 				if (exists) {
@@ -85,7 +88,7 @@ http.createServer(function (req, res) {
 					});
 				} else {
 					
-					res.end(html.error('no such file!'));
+					res.end(html.error('对应的文件不存在!'));
 				}
 			});
 			
@@ -94,11 +97,11 @@ http.createServer(function (req, res) {
 				if (err) throw err;
 				
 				res.writeHead(200, {'Content-Type':'text/html'});
-				res.write(html.head('List of Config'));
-				res.write('<h3>list of config files in logstash directory</h3>');
+				res.write(html.head('配置文件列表'));
+				res.write('<h3>logstash目录下的配置文件列表</h3>');
 				files.forEach(function (file){
 					if (path.extname(file) == '.conf') {
-						res.write('<a href="/view?name=' + file + '">Edit</a>&nbsp' + '<a href="/start?conf=' + file + '">Run</a>&nbsp<a href="/delete?name=' + file +'">Delete</a>&nbsp');
+						res.write('<a href="/view?name=' + file + '">编辑</a>&nbsp' + '<a href="/start?conf=' + file + '">启动</a>&nbsp<a href="/delete?name=' + file +'">删除</a>&nbsp');
 						if (file == defaultFilename) {
 							res.write('<b>' + file + '</b><br />');
 						} else {
@@ -106,7 +109,7 @@ http.createServer(function (req, res) {
 						}
 					}
 				});
-				res.write('<a href="/">Back</a>');
+				res.write('<a href="/">返回</a>');
 				res.end(html.foot());
 			});
 		}
@@ -123,35 +126,36 @@ http.createServer(function (req, res) {
 				fs.writeFile('../' + filename, post['file'], function(err) {
 					if (err) throw err;
 					console.log('[INFO] uploaded file: '+ filename);
-					res.end(html.info('File uploaded successful!'));
+					res.end(html.info('文件上传成功!'));
 				});
 			} else {
-				res.end(html.error('It isn\'t a config file...'));
+				res.end(html.error('不是一个有效的配置文件...'));
 			}
 		});
 	} else if ('/delete' == pathname) {
 		var name = query.name;
 		if (name == undefined) {
-			res.end(html.error('Need a correct file name...'));
+			res.end(html.error('必须提供有效的文件名 ...'));
 		} else {
 			if (path.extname(name) != '.conf'){
-				res.end(html.error('The file to delete must have suffix .conf...'));
+				res.end(html.error('要删除的文件必须以.conf为后缀...'));
 			}
 			fs.exists('../' + name, function(exists) {
 				if (exists) {
 					fs.unlink('../' + name, function(err, data){
 						if (err) throw err;
-						res.end(html.info('Delete file successful!'));
+						res.end(html.info('删除文件成功!'));
 					});
 				} else {
-					res.end(html.error('No such file!'));
+					res.end(html.error('该文件不存在!'));
 				}
 			});
 		}
 	} else {
 		res.writeHead(404);
-		res.end(html.error('No handler for url ' + req.url));
+		res.end(html.error('未找到处理URL ' + req.url + '的模块'));
 	}
 }).listen(listenPort); 
 console.log("[INFO] Server started..." + 'Listening Port: ' + listenPort);
 console.log("[INFO] Platform is windows:" + isWin);
+
